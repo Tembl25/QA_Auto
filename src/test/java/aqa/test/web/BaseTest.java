@@ -11,6 +11,8 @@ public class BaseTest {
     @BeforeAll
     public static void setUp() {
         Configuration.browser = "chrome";
+        Configuration.headless = true;
+        Configuration.browserSize = "1920x1080";
         Configuration.pageLoadTimeout = 30_000L;
 
         SelenideLogger.addListener(
