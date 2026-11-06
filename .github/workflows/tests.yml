@@ -1,5 +1,5 @@
 
-name: UI Autotests
+name: UI Autotests and Allure Report
 
 on:
   push:
@@ -8,9 +8,21 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
 jobs:
   ui-tests:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout repository
@@ -26,20 +38,29 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run tests
+        id: tests
+        continue-on-error: true
         run: ./gradlew clean test -Dselenide.headless=true
 
       - name: Generate Allure report
         if: always()
         run: ./gradlew allureReport
 
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Configure GitHub Pages
+        if: always() && steps.tests.outcome != 'cancelled'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Allure report
+        if: always() && steps.tests.outcome != 'cancelled'
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: test-reports
-          path: |
-            build/allure-results/
-            build/reports/allure-report/
-            build/reports/tests/test/
-          if-no-files-found: ignore
-          retention-days: 7
+          path: build/reports/allure-report/allureReport
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: always() && steps.tests.outcome != 'cancelled'
+        uses: actions/deploy-pages@v4
+
+      - name: Mark workflow failed if tests failed
+        if: always() && steps.tests.outcome == 'failure'
+        run: exit 1
