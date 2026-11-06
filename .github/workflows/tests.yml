@@ -28,12 +28,18 @@ jobs:
       - name: Run tests
         run: ./gradlew clean test -Dselenide.headless=true
 
-      - name: Upload test results
+      - name: Generate Allure report
+        if: always()
+        run: ./gradlew allureReport
+
+      - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-reports
           path: |
-            build/reports/tests/test/
             build/allure-results/
+            build/reports/allure-report/
+            build/reports/tests/test/
           if-no-files-found: ignore
+          retention-days: 7
